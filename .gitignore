@@ -19,6 +19,11 @@ out/
 *.egg-info/
 *.egg
 
+# Next.js
+.next/
+next-env.d.ts.bak
+*.tsbuildinfo
+
 # Logs
 logs/
 *.log
