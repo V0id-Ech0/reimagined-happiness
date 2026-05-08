@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up environment
+        # Replace this step with the appropriate setup action for your stack,
+        # e.g. actions/setup-node, actions/setup-python, etc.
+        run: echo "Add your setup step here"
+
+      - name: Install dependencies
+        run: echo "Add your install command here"
+
+      - name: Run tests
+        run: echo "Add your test command here"
+
+      - name: Lint
+        run: echo "Add your lint command here"
