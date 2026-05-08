@@ -2,6 +2,7 @@ import dynamic from "next/dynamic";
 import { Wordmark } from "@/components/ui/Wordmark";
 import { NavPanel } from "@/components/ui/NavPanel";
 import { ConjureButton } from "@/components/ui/ConjureButton";
+import { CanvasHint } from "@/components/ui/CanvasHint";
 
 // Canvas is client-only — Three.js won't run during SSR
 const Cosmos = dynamic(
@@ -25,6 +26,7 @@ export default function Home() {
 
       {/* Persistent UI shell */}
       <Wordmark />
+      <CanvasHint />
       <NavPanel />
       <ConjureButton />
     </main>

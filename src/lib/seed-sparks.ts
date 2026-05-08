@@ -43,11 +43,14 @@ function hash(seed: number, salt: number) {
 export function generateSeedSparks(count = 64): SeedSpark[] {
   const sparks: SeedSpark[] = [];
   for (let i = 0; i < count; i++) {
+    // Wider radial spread with a subtle bias toward the center
+    // so the cosmos feels denser nearby and sparser at the edges.
     const angle = hash(i, 1) * Math.PI * 2;
-    const distance = 4 + hash(i, 2) * 18;
+    const r = hash(i, 2);
+    const distance = 3 + Math.pow(r, 0.7) * 45;
     const x = Math.cos(angle) * distance;
-    const y = Math.sin(angle) * distance * 0.7;
-    const z = (hash(i, 3) - 0.5) * 6;
+    const y = Math.sin(angle) * distance * 0.78;
+    const z = (hash(i, 3) - 0.5) * 14;
     sparks.push({
       id: `seed-${i}`,
       x,
