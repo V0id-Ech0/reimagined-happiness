@@ -54,7 +54,7 @@ export function generateSeedSparks(count = 64): SeedSpark[] {
       y,
       z,
       hue: 20 + hash(i, 4) * 320,
-      radius: 0.06 + hash(i, 5) * 0.14,
+      radius: 0.1 + hash(i, 5) * 0.22,
       driftSpeed: 0.2 + hash(i, 6) * 0.6,
       phase: hash(i, 7) * Math.PI * 2,
       intensity: 0.4 + hash(i, 8) * 0.6,

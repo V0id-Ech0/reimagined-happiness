@@ -19,7 +19,7 @@ export function Spark({ spark }: Props) {
   const innerRef = useRef<THREE.Mesh>(null);
   const haloRef = useRef<THREE.Mesh>(null);
 
-  const color = new THREE.Color().setHSL(spark.hue / 360, 0.55, 0.65);
+  const color = new THREE.Color().setHSL(spark.hue / 360, 0.9, 0.78);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -41,24 +41,35 @@ export function Spark({ spark }: Props) {
 
   return (
     <group ref={groupRef} position={[spark.x, spark.y, spark.z]}>
-      {/* Outer halo — soft, low-opacity */}
-      <mesh ref={haloRef}>
-        <sphereGeometry args={[spark.radius * 4, 16, 16]} />
+      {/* Wide atmosphere — barely there, just warms the void */}
+      <mesh>
+        <sphereGeometry args={[spark.radius * 7, 16, 16]} />
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={spark.intensity * 0.06}
+          opacity={spark.intensity * 0.04}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      {/* Outer halo */}
+      <mesh ref={haloRef}>
+        <sphereGeometry args={[spark.radius * 3.5, 16, 16]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={spark.intensity * 0.14}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
       {/* Mid glow */}
       <mesh>
-        <sphereGeometry args={[spark.radius * 2.2, 16, 16]} />
+        <sphereGeometry args={[spark.radius * 2, 16, 16]} />
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={spark.intensity * 0.18}
+          opacity={spark.intensity * 0.38}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
@@ -69,7 +80,7 @@ export function Spark({ spark }: Props) {
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={Math.min(1, spark.intensity * 0.95)}
+          opacity={Math.min(1, spark.intensity * 1.1)}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
