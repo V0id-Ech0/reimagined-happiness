@@ -4,10 +4,10 @@ import { createClient } from "@supabase/supabase-js";
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
-// Service role — only used server-side, never exposed to client
+// update_moment_artifact is security-definer so the anon key is enough
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
 export async function POST(req: Request) {
@@ -32,34 +32,24 @@ export async function POST(req: Request) {
       },
     });
 
-    // SDK v1 returns FileOutput objects — use .url() to get the CDN URL
+    // SDK v1 returns FileOutput objects — .url() gives the CDN URL
     const fileOutput = Array.isArray(output) ? output[0] : output;
-    const replicateUrl = (fileOutput as { url(): URL }).url().href;
+    const url: string =
+      fileOutput !== null &&
+      typeof fileOutput === "object" &&
+      "url" in fileOutput
+        ? (fileOutput as { url(): URL }).url().href
+        : String(fileOutput);
 
-    // Download and re-upload to Supabase Storage so the URL never expires
-    const imgRes = await fetch(replicateUrl);
-    if (!imgRes.ok) throw new Error(`Replicate fetch failed: ${imgRes.status}`);
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+    if (!url.startsWith("http")) throw new Error(`Unexpected URL: ${url}`);
 
-    const { error: uploadError } = await supabase.storage
-      .from("artifacts")
-      .upload(`${id}.webp`, imgBuffer, {
-        contentType: "image/webp",
-        upsert: true,
-      });
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from("artifacts")
-      .getPublicUrl(`${id}.webp`);
-
-    const { error: rpcError } = await supabase.rpc("update_moment_artifact", {
+    const { error } = await supabase.rpc("update_moment_artifact", {
       p_id: id,
-      p_artifact_url: publicUrl,
+      p_artifact_url: url,
     });
-    if (rpcError) throw rpcError;
+    if (error) throw error;
 
-    return NextResponse.json({ url: publicUrl });
+    return NextResponse.json({ url });
   } catch (err) {
     console.error("[phosphene] artifact error", err);
     return NextResponse.json({ error: "generation failed" }, { status: 500 });

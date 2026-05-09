@@ -43,6 +43,15 @@ export async function fetchMyMoments(userId: string): Promise<UserSpark[]> {
 
 export async function saveMoment(spark: UserSpark, userId: string | null): Promise<void> {
   const supabase = createClient();
+
+  // If the store hasn't resolved the auth session yet, pull it from the client
+  // directly so the RLS policy (auth.uid() = user_id) always passes.
+  let resolvedUserId = userId;
+  if (!resolvedUserId) {
+    const { data: { session } } = await supabase.auth.getSession();
+    resolvedUserId = session?.user?.id ?? null;
+  }
+
   const { error } = await supabase.from("moments").insert({
     id: spark.id,
     words: spark.words,
@@ -54,7 +63,7 @@ export async function saveMoment(spark: UserSpark, userId: string | null): Promi
     radius: spark.radius,
     drift_speed: spark.driftSpeed,
     phase: spark.phase,
-    user_id: userId,
+    user_id: resolvedUserId,
     handle: spark.handle ?? null,
   });
   if (error) throw error;

@@ -122,13 +122,18 @@ export const useStore = create<Store>((set, get) => ({
           requestEmbedding(stamped.id, stamped.words),
           requestArtifact(stamped.id, stamped.words),
         ]);
-        if (artifactUrl) {
-          set((s) => ({
-            userSparks: s.userSparks.map((us) =>
-              us.id === stamped.id ? { ...us, artifactUrl } : us
-            ),
-          }));
-        }
+        // Reload similarity pairs now that a new embedding exists
+        const pairs = await fetchSimilarPairs(0.60);
+        set((s) => ({
+          similarPairs: pairs,
+          ...(artifactUrl
+            ? {
+                userSparks: s.userSparks.map((us) =>
+                  us.id === stamped.id ? { ...us, artifactUrl } : us
+                ),
+              }
+            : {}),
+        }));
       })
       .catch(console.error);
   },
