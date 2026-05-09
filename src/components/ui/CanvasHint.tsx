@@ -34,7 +34,7 @@ export function CanvasHint() {
           transition={{ duration: 1.6, delay: 2.4, ease: "easeOut" }}
           className="pointer-events-none fixed right-6 top-6 z-10 select-none text-[10px] font-light uppercase tracking-[0.25em] text-stone-400"
         >
-          drag · scroll to zoom
+          wander · draw near
         </motion.div>
       )}
     </AnimatePresence>

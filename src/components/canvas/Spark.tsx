@@ -25,17 +25,20 @@ type Props = {
 };
 
 const GLOW_DURATION_MS = 12_000;
+const BURST_DURATION_MS = 1_400;
 
 export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const coreRef = useRef<THREE.Mesh>(null);
   const haloRef = useRef<THREE.Mesh>(null);
   const midRef = useRef<THREE.Mesh>(null);
+  const burstRef = useRef<THREE.Mesh>(null);
+  const burstDone = useRef(false);
   const dim = useRef(1);
 
   const color = new THREE.Color().setHSL(spark.hue / 360, 1, 0.65);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera }) => {
     const t = clock.elapsedTime;
 
     if (groupRef.current) {
@@ -75,6 +78,21 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
       mat.opacity = Math.min(1, spark.intensity * 0.55 * totalMult);
       midRef.current.scale.setScalar(scaleMult);
     }
+
+    // Birth burst ring — billboard, expands and fades once
+    if (bornAt && burstRef.current && !burstDone.current) {
+      const age = (Date.now() - bornAt) / BURST_DURATION_MS;
+      if (age >= 1) {
+        burstDone.current = true;
+        burstRef.current.visible = false;
+      } else {
+        const eased = 1 - Math.pow(1 - age, 2.5);
+        burstRef.current.scale.setScalar(1 + eased * 6);
+        const mat = burstRef.current.material as THREE.MeshBasicMaterial;
+        mat.opacity = (1 - age) * 0.55;
+        burstRef.current.quaternion.copy(camera.quaternion);
+      }
+    }
   });
 
   const pointerHandlers = moment
@@ -98,6 +116,23 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
 
   return (
     <group ref={groupRef} position={[spark.x, spark.y, spark.z]} {...pointerHandlers}>
+      {/* Birth burst ring — only mounted for freshly conjured sparks */}
+      {bornAt && (
+        <mesh ref={burstRef} renderOrder={0}>
+          <ringGeometry args={[r * 1.1, r * 1.6, 48]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.55}
+            depthWrite={false}
+            depthTest={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+
       <mesh ref={haloRef} renderOrder={1}>
         <sphereGeometry args={[r * 3, 16, 16]} />
         <meshBasicMaterial

@@ -62,8 +62,8 @@ export function ConjureModal() {
             onSubmit={onSubmit}
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, y: -8, scale: 1.02 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
             className="relative mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-void-900/80 p-8 shadow-2xl backdrop-blur-xl"
           >
@@ -133,13 +133,22 @@ export function ConjureModal() {
               <span className="text-[11px] italic text-stone-500">
                 it will glow, then settle
               </span>
-              <button
+              <motion.button
                 type="submit"
                 disabled={!canSubmit}
-                className="rounded-full border border-white/15 bg-white/[0.04] px-6 py-2 text-xs uppercase tracking-[0.25em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white/[0.04]"
+                whileHover={canSubmit ? { scale: 1.04 } : {}}
+                whileTap={canSubmit ? { scale: 0.94 } : {}}
+                className="relative rounded-full border border-white/15 bg-white/[0.04] px-6 py-2 text-xs uppercase tracking-[0.25em] text-stone-200 transition hover:border-white/30 hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white/[0.04]"
               >
+                {canSubmit && (
+                  <motion.span
+                    className="absolute inset-0 rounded-full border border-white/20"
+                    animate={{ scale: [1, 1.5], opacity: [0.4, 0] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
+                  />
+                )}
                 Conjure
-              </button>
+              </motion.button>
             </div>
           </motion.form>
         </motion.div>

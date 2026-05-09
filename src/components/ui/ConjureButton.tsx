@@ -17,6 +17,13 @@ export function ConjureButton() {
       className="pointer-events-auto fixed bottom-6 right-6 z-20 group"
       aria-label="Add a moment of happiness"
     >
+      {/* Sonar pulse — draws the eye without demanding it */}
+      <motion.span
+        className="absolute inset-0 rounded-full border border-white/25"
+        animate={{ scale: [1, 1.9], opacity: [0.3, 0] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut", repeatDelay: 1 }}
+      />
+
       <span className="absolute inset-0 rounded-full bg-glow-warm/10 blur-xl transition group-hover:bg-glow-warm/20" />
       <span className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-void-900/70 text-stone-200 backdrop-blur-md transition group-hover:border-white/30 group-hover:text-white">
         <PlusGlyph />
