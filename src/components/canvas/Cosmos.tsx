@@ -87,7 +87,7 @@ export function Cosmos() {
             key={`db-${s.id}`}
             spark={toSeedShape(s)}
             dimTo={backgroundDimTo}
-            moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl }}
+            moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl, handle: s.handle }}
             onHover={onHover}
             onHoverEnd={onHoverEnd}
           />
@@ -98,7 +98,7 @@ export function Cosmos() {
         <Spark
           key={s.id}
           spark={toSeedShape(s)}
-          moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl }}
+          moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl, handle: s.handle }}
           onHover={onHover}
           onHoverEnd={onHoverEnd}
         />
@@ -110,7 +110,7 @@ export function Cosmos() {
           key={s.id}
           spark={toSeedShape(s)}
           bornAt={s.createdAt}
-          moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl }}
+          moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl, handle: s.handle }}
           onHover={onHover}
           onHoverEnd={onHoverEnd}
         />

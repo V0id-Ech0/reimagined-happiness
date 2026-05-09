@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { fetchMoments, fetchMyMoments, saveMoment } from "@/lib/supabase/moments";
 import { fetchSimilarPairs, requestEmbedding, requestArtifact, type SimilarPair } from "@/lib/supabase/similarity";
+import { getOrCreateHandle } from "@/lib/handle";
 
 export type GlowColor = "warm" | "cool" | "rose" | "sage" | "violet";
 
@@ -25,6 +26,7 @@ export type UserSpark = {
   phase: number;
   createdAt: number;
   artifactUrl?: string;
+  handle?: string;
 };
 
 type PendingConjure = {
@@ -42,6 +44,10 @@ type Store = {
   // Auth — anonymous session, persisted across refreshes
   userId: string | null;
   setUserId: (id: string | null) => void;
+
+  // Poetic location handle, e.g. "a wandering spark from Kyoto"
+  localHandle: string | null;
+  initHandle: () => Promise<void>;
 
   // All sparks in the shared cosmos
   dbSparks: UserSpark[];
@@ -62,7 +68,7 @@ type Store = {
   loadSimilarPairs: () => Promise<void>;
 
   // Hover card
-  hoveredMoment: { id: string; words: string; color: GlowColor; artifactUrl?: string; x: number; y: number } | null;
+  hoveredMoment: { id: string; words: string; color: GlowColor; artifactUrl?: string; handle?: string; x: number; y: number } | null;
   setHoveredMoment: (m: Store["hoveredMoment"]) => void;
 
   // Two-view zoom system
@@ -81,6 +87,12 @@ export const useStore = create<Store>((set, get) => ({
   userId: null,
   setUserId: (id) => set({ userId: id }),
 
+  localHandle: null,
+  initHandle: async () => {
+    const h = await getOrCreateHandle();
+    set({ localHandle: h });
+  },
+
   dbSparks: [],
   loadMoments: async () => {
     const sparks = await fetchMoments();
@@ -98,21 +110,22 @@ export const useStore = create<Store>((set, get) => ({
   requestConjure: (words, color) =>
     set({ pendingConjure: { words, color }, isConjureOpen: false }),
   commitSpark: (spark) => {
+    const { userId, localHandle } = get();
+    const stamped = { ...spark, handle: localHandle ?? undefined };
     set((state) => ({
-      userSparks: [...state.userSparks, spark],
+      userSparks: [...state.userSparks, stamped],
       pendingConjure: null,
     }));
-    const { userId } = get();
-    saveMoment(spark, userId)
+    saveMoment(stamped, userId)
       .then(async () => {
         const [, artifactUrl] = await Promise.all([
-          requestEmbedding(spark.id, spark.words),
-          requestArtifact(spark.id, spark.words),
+          requestEmbedding(stamped.id, stamped.words),
+          requestArtifact(stamped.id, stamped.words),
         ]);
         if (artifactUrl) {
           set((s) => ({
             userSparks: s.userSparks.map((us) =>
-              us.id === spark.id ? { ...us, artifactUrl } : us
+              us.id === stamped.id ? { ...us, artifactUrl } : us
             ),
           }));
         }

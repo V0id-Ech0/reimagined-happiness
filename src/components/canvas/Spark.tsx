@@ -11,6 +11,7 @@ export type MomentMeta = {
   words: string;
   color: GlowColor;
   artifactUrl?: string;
+  handle?: string;
 };
 
 type Props = {

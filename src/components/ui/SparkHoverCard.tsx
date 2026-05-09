@@ -35,6 +35,11 @@ export function SparkHoverCard() {
             <p className="text-[12px] font-light leading-relaxed tracking-wide text-stone-300">
               {hovered.words}
             </p>
+            {hovered.handle && (
+              <p className="mt-2 text-[10px] font-light tracking-widest text-stone-500 uppercase">
+                {hovered.handle}
+              </p>
+            )}
           </div>
         </motion.div>
       )}

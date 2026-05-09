@@ -12,6 +12,7 @@ import { useStore } from "@/lib/store";
 export function AuthInit() {
   const setUserId = useStore((s) => s.setUserId);
   const loadMyMoments = useStore((s) => s.loadMyMoments);
+  const initHandle = useStore((s) => s.initHandle);
 
   useEffect(() => {
     getOrCreateUserId().then((id) => {
@@ -19,7 +20,8 @@ export function AuthInit() {
       setUserId(id);
       loadMyMoments(id);
     });
-  }, [setUserId, loadMyMoments]);
+    initHandle();
+  }, [setUserId, loadMyMoments, initHandle]);
 
   return null;
 }
