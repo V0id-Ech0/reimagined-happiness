@@ -4,9 +4,10 @@ import { createClient } from "@supabase/supabase-js";
 
 const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
 
+// Service role — only used server-side, never exposed to client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(req: Request) {
@@ -31,17 +32,34 @@ export async function POST(req: Request) {
       },
     });
 
-    // SDK v1 returns FileOutput objects — coerce to URL string
-    const url = String(Array.isArray(output) ? output[0] : output);
+    // SDK v1 returns FileOutput objects — use .url() to get the CDN URL
+    const fileOutput = Array.isArray(output) ? output[0] : output;
+    const replicateUrl = (fileOutput as { url(): URL }).url().href;
 
-    const { error } = await supabase.rpc("update_moment_artifact", {
+    // Download and re-upload to Supabase Storage so the URL never expires
+    const imgRes = await fetch(replicateUrl);
+    if (!imgRes.ok) throw new Error(`Replicate fetch failed: ${imgRes.status}`);
+    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+
+    const { error: uploadError } = await supabase.storage
+      .from("artifacts")
+      .upload(`${id}.webp`, imgBuffer, {
+        contentType: "image/webp",
+        upsert: true,
+      });
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("artifacts")
+      .getPublicUrl(`${id}.webp`);
+
+    const { error: rpcError } = await supabase.rpc("update_moment_artifact", {
       p_id: id,
-      p_artifact_url: url,
+      p_artifact_url: publicUrl,
     });
+    if (rpcError) throw rpcError;
 
-    if (error) throw error;
-
-    return NextResponse.json({ url });
+    return NextResponse.json({ url: publicUrl });
   } catch (err) {
     console.error("[phosphene] artifact error", err);
     return NextResponse.json({ error: "generation failed" }, { status: 500 });

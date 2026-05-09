@@ -27,11 +27,56 @@ type Props = {
 const GLOW_DURATION_MS = 12_000;
 const BURST_DURATION_MS = 1_400;
 
+// Shared star-flare texture — created once, tinted per-spark via SpriteMaterial.color
+let _flareTexture: THREE.CanvasTexture | null = null;
+function getFlareTexture(): THREE.CanvasTexture {
+  if (_flareTexture) return _flareTexture;
+
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const c = size / 2;
+
+  // 4 crossing rays at 0°, 45°, 90°, 135°
+  const angles = [0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4];
+  for (const angle of angles) {
+    const dx = Math.cos(angle) * c * 0.96;
+    const dy = Math.sin(angle) * c * 0.96;
+    const grad = ctx.createLinearGradient(c - dx, c - dy, c + dx, c + dy);
+    grad.addColorStop(0, "rgba(255,255,255,0)");
+    grad.addColorStop(0.38, "rgba(255,255,255,0.04)");
+    grad.addColorStop(0.5, "rgba(255,255,255,1)");
+    grad.addColorStop(0.62, "rgba(255,255,255,0.04)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(c - dx, c - dy);
+    ctx.lineTo(c + dx, c + dy);
+    ctx.stroke();
+  }
+
+  // Soft bloom at centre — gives the rays a natural hotspot
+  const bloom = ctx.createRadialGradient(c, c, 0, c, c, c * 0.38);
+  bloom.addColorStop(0, "rgba(255,255,255,0.95)");
+  bloom.addColorStop(0.5, "rgba(255,255,255,0.25)");
+  bloom.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = bloom;
+  ctx.fillRect(0, 0, size, size);
+
+  _flareTexture = new THREE.CanvasTexture(canvas);
+  return _flareTexture;
+}
+
 export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const coreRef = useRef<THREE.Mesh>(null);
   const haloRef = useRef<THREE.Mesh>(null);
   const midRef = useRef<THREE.Mesh>(null);
+  const flareRef = useRef<THREE.Sprite>(null);
+  const flareMatRef = useRef<THREE.SpriteMaterial>(null);
   const burstRef = useRef<THREE.Mesh>(null);
   const burstDone = useRef(false);
   const dim = useRef(1);
@@ -62,7 +107,13 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
     }
 
     const totalMult = glowMult * dim.current;
-    const pulse = 0.88 + Math.sin(t * 1.4 + spark.phase) * 0.12;
+
+    // Two overlapping sines for organic, non-mechanical breathing
+    const pulse =
+      0.82 +
+      Math.sin(t * 1.4 + spark.phase) * 0.1 +
+      Math.sin(t * 3.3 + spark.phase * 1.7) * 0.05;
+
     if (coreRef.current) {
       coreRef.current.scale.setScalar(pulse * scaleMult);
       const mat = coreRef.current.material as THREE.MeshBasicMaterial;
@@ -71,12 +122,23 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
     if (haloRef.current) {
       const mat = haloRef.current.material as THREE.MeshBasicMaterial;
       mat.opacity = Math.min(1, spark.intensity * 0.22 * totalMult);
-      haloRef.current.scale.setScalar(scaleMult);
+      haloRef.current.scale.setScalar(pulse * scaleMult);
     }
     if (midRef.current) {
       const mat = midRef.current.material as THREE.MeshBasicMaterial;
       mat.opacity = Math.min(1, spark.intensity * 0.55 * totalMult);
-      midRef.current.scale.setScalar(scaleMult);
+      midRef.current.scale.setScalar(pulse * scaleMult);
+    }
+
+    // Star flare — slow rotation makes it feel alive, not static
+    if (flareRef.current && flareMatRef.current) {
+      const flareScale = spark.radius * 14 * scaleMult;
+      flareRef.current.scale.set(flareScale, flareScale, 1);
+      flareMatRef.current.rotation = t * 0.09 + spark.phase;
+      flareMatRef.current.opacity = Math.min(
+        0.6,
+        spark.intensity * 0.38 * totalMult * pulse,
+      );
     }
 
     // Birth burst ring — billboard, expands and fades once
@@ -133,7 +195,22 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
         </mesh>
       )}
 
-      <mesh ref={haloRef} renderOrder={1}>
+      {/* Star flare — auto-faces camera, slow rotation, tinted by spark color */}
+      <sprite ref={flareRef} renderOrder={1}>
+        <spriteMaterial
+          ref={flareMatRef}
+          map={getFlareTexture()}
+          color={color}
+          transparent
+          opacity={spark.intensity * 0.38}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          depthTest={false}
+          toneMapped={false}
+        />
+      </sprite>
+
+      <mesh ref={haloRef} renderOrder={2}>
         <sphereGeometry args={[r * 3, 16, 16]} />
         <meshBasicMaterial
           color={color}
@@ -146,7 +223,7 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
         />
       </mesh>
 
-      <mesh ref={midRef} renderOrder={2}>
+      <mesh ref={midRef} renderOrder={3}>
         <sphereGeometry args={[r * 1.7, 16, 16]} />
         <meshBasicMaterial
           color={color}
@@ -159,7 +236,7 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
         />
       </mesh>
 
-      <mesh ref={coreRef} renderOrder={3}>
+      <mesh ref={coreRef} renderOrder={4}>
         <sphereGeometry args={[r * 0.95, 16, 16]} />
         <meshBasicMaterial
           color={color}
