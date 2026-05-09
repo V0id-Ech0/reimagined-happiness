@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { fetchMoments, fetchMyMoments, saveMoment } from "@/lib/supabase/moments";
+import { fetchSimilarPairs, requestEmbedding, type SimilarPair } from "@/lib/supabase/similarity";
 
 export type GlowColor = "warm" | "cool" | "rose" | "sage" | "violet";
 
@@ -55,6 +56,10 @@ type Store = {
   requestConjure: (words: string, color: GlowColor) => void;
   commitSpark: (spark: UserSpark) => void;
 
+  // AI similarity threads
+  similarPairs: SimilarPair[];
+  loadSimilarPairs: () => Promise<void>;
+
   // Two-view zoom system
   viewMode: ViewMode;
   viewVersion: number;
@@ -93,7 +98,15 @@ export const useStore = create<Store>((set, get) => ({
       pendingConjure: null,
     }));
     const { userId } = get();
-    saveMoment(spark, userId).catch(console.error);
+    saveMoment(spark, userId)
+      .then(() => requestEmbedding(spark.id, spark.words))
+      .catch(console.error);
+  },
+
+  similarPairs: [],
+  loadSimilarPairs: async () => {
+    const pairs = await fetchSimilarPairs();
+    set({ similarPairs: pairs });
   },
 
   viewMode: "cosmos",

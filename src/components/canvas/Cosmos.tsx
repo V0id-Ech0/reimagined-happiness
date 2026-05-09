@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { Spark } from "./Spark";
+import { SimilarityThreads } from "./SimilarityThreads";
 import { CustomControls } from "./CustomControls";
 import { generateSeedSparks } from "@/lib/seed-sparks";
 import { useStore, GLOW_HUES, type UserSpark } from "@/lib/store";
@@ -14,11 +15,14 @@ export function Cosmos() {
   const myDbSparks = useStore((s) => s.myDbSparks);   // my persistent sparks
   const dbSparks = useStore((s) => s.dbSparks);        // everyone's sparks
   const loadMoments = useStore((s) => s.loadMoments);
+  const loadSimilarPairs = useStore((s) => s.loadSimilarPairs);
+  const similarPairs = useStore((s) => s.similarPairs);
   const viewMode = useStore((s) => s.viewMode);
 
   useEffect(() => {
     loadMoments();
-  }, [loadMoments]);
+    loadSimilarPairs();
+  }, [loadMoments, loadSimilarPairs]);
 
   // "Mine" = persistent from DB + newly conjured this session
   const myIds = new Set([
@@ -33,6 +37,15 @@ export function Cosmos() {
   // myDbSparks that haven't been re-conjured this session (avoid double-render)
   const sessionIds = new Set(userSparks.map((s) => s.id));
   const persistedMySparks = myDbSparks.filter((s) => !sessionIds.has(s.id));
+
+  // Position map for SimilarityThreads — covers all rendered sparks
+  const sparkPositions = useMemo(() => {
+    const all = [...backgroundSparks, ...persistedMySparks, ...userSparks];
+    const map: Record<string, { x: number; y: number; z: number }> = {};
+    for (const s of all) map[s.id] = { x: s.x, y: s.y, z: s.z };
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dbSparks, myDbSparks, userSparks]);
 
   return (
     <Canvas
@@ -74,6 +87,7 @@ export function Cosmos() {
         />
       ))}
 
+      <SimilarityThreads pairs={similarPairs} positions={sparkPositions} />
       <ConjureCommitter />
       <CameraAnimator />
       <CustomControls minDistance={4} maxDistance={60} />
