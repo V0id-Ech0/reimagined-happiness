@@ -18,8 +18,8 @@ export async function POST(req: Request) {
     }
 
     const prompt =
-      `abstract luminous particle art, glowing ethereal light, dark cosmic void background, ` +
-      `"${words}", bokeh light streaks, no text, minimalist, macro photography`;
+      `"${words}" — ethereal glowing interpretation, luminous light painting style, ` +
+      `dark cosmic void background, soft bokeh, dreamlike and cinematic, no text, no words`;
 
     const output = await replicate.run("black-forest-labs/flux-schnell", {
       input: {
