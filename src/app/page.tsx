@@ -4,6 +4,7 @@ import { NavPanel } from "@/components/ui/NavPanel";
 import { ConjureButton } from "@/components/ui/ConjureButton";
 import { ConjureModal } from "@/components/ui/ConjureModal";
 import { CanvasHint } from "@/components/ui/CanvasHint";
+import { AuthInit } from "@/components/ui/AuthInit";
 
 // Canvas is client-only — Three.js won't run during SSR
 const Cosmos = dynamic(
@@ -26,6 +27,7 @@ export default function Home() {
       <div className="canvas-vignette pointer-events-none absolute inset-0" />
 
       {/* Persistent UI shell */}
+      <AuthInit />
       <Wordmark />
       <CanvasHint />
       <NavPanel />

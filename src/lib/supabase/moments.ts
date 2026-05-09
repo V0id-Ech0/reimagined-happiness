@@ -27,7 +27,19 @@ export async function fetchMoments(limit = 400): Promise<UserSpark[]> {
   return data.map(rowToSpark);
 }
 
-export async function saveMoment(spark: UserSpark): Promise<void> {
+export async function fetchMyMoments(userId: string): Promise<UserSpark[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("moments")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data.map(rowToSpark);
+}
+
+export async function saveMoment(spark: UserSpark, userId: string | null): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("moments").insert({
     id: spark.id,
@@ -40,6 +52,7 @@ export async function saveMoment(spark: UserSpark): Promise<void> {
     radius: spark.radius,
     drift_speed: spark.driftSpeed,
     phase: spark.phase,
+    user_id: userId,
   });
   if (error) throw error;
 }

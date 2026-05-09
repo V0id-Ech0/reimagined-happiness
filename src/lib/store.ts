@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { fetchMoments, saveMoment } from "@/lib/supabase/moments";
+import { fetchMoments, fetchMyMoments, saveMoment } from "@/lib/supabase/moments";
 
 export type GlowColor = "warm" | "cool" | "rose" | "sage" | "violet";
 
@@ -37,35 +37,50 @@ type Store = {
   openConjure: () => void;
   closeConjure: () => void;
 
-  // Sparks loaded from Supabase (the shared cosmos)
+  // Auth — anonymous session, persisted across refreshes
+  userId: string | null;
+  setUserId: (id: string | null) => void;
+
+  // All sparks in the shared cosmos
   dbSparks: UserSpark[];
   loadMoments: () => Promise<void>;
 
-  // Sparks conjured in this session (get the bright glow phase)
+  // Only this user's persistent sparks (loaded from Supabase by user_id)
+  myDbSparks: UserSpark[];
+  loadMyMoments: (userId: string) => Promise<void>;
+
+  // Sparks conjured in this session (bright glow phase)
   userSparks: UserSpark[];
   pendingConjure: PendingConjure | null;
   requestConjure: (words: string, color: GlowColor) => void;
   commitSpark: (spark: UserSpark) => void;
 
-  // The two-view zoom system
+  // Two-view zoom system
   viewMode: ViewMode;
-  // Bumped on every setViewMode, even if mode doesn't change — re-triggers the
-  // camera animator so a user who manually drifted away can re-snap to view.
   viewVersion: number;
   setViewMode: (mode: ViewMode) => void;
   isTransitioning: boolean;
   _setTransitioning: (v: boolean) => void;
 };
 
-export const useStore = create<Store>((set) => ({
+export const useStore = create<Store>((set, get) => ({
   isConjureOpen: false,
   openConjure: () => set({ isConjureOpen: true }),
   closeConjure: () => set({ isConjureOpen: false }),
+
+  userId: null,
+  setUserId: (id) => set({ userId: id }),
 
   dbSparks: [],
   loadMoments: async () => {
     const sparks = await fetchMoments();
     set({ dbSparks: sparks });
+  },
+
+  myDbSparks: [],
+  loadMyMoments: async (userId) => {
+    const sparks = await fetchMyMoments(userId);
+    set({ myDbSparks: sparks });
   },
 
   userSparks: [],
@@ -77,7 +92,8 @@ export const useStore = create<Store>((set) => ({
       userSparks: [...state.userSparks, spark],
       pendingConjure: null,
     }));
-    saveMoment(spark).catch(console.error);
+    const { userId } = get();
+    saveMoment(spark, userId).catch(console.error);
   },
 
   viewMode: "cosmos",

@@ -10,8 +10,9 @@ import { useStore, GLOW_HUES, type UserSpark } from "@/lib/store";
 
 export function Cosmos() {
   const sparks = useMemo(() => generateSeedSparks(160), []);
-  const userSparks = useStore((s) => s.userSparks);
-  const dbSparks = useStore((s) => s.dbSparks);
+  const userSparks = useStore((s) => s.userSparks);    // this session
+  const myDbSparks = useStore((s) => s.myDbSparks);   // my persistent sparks
+  const dbSparks = useStore((s) => s.dbSparks);        // everyone's sparks
   const loadMoments = useStore((s) => s.loadMoments);
   const viewMode = useStore((s) => s.viewMode);
 
@@ -19,11 +20,19 @@ export function Cosmos() {
     loadMoments();
   }, [loadMoments]);
 
-  const backgroundSparks = dbSparks.length > 0 ? dbSparks : sparks;
-  const sessionIds = new Set(userSparks.map((s) => s.id));
+  // "Mine" = persistent from DB + newly conjured this session
+  const myIds = new Set([
+    ...myDbSparks.map((s) => s.id),
+    ...userSparks.map((s) => s.id),
+  ]);
 
-  // In constellation view, anything that isn't yours fades way down
+  // Background = public cosmos minus sparks already shown as "mine"
+  const backgroundSparks = dbSparks.length > 0 ? dbSparks : sparks;
   const backgroundDimTo = viewMode === "constellation" ? 0.12 : 1;
+
+  // myDbSparks that haven't been re-conjured this session (avoid double-render)
+  const sessionIds = new Set(userSparks.map((s) => s.id));
+  const persistedMySparks = myDbSparks.filter((s) => !sessionIds.has(s.id));
 
   return (
     <Canvas
@@ -44,27 +53,23 @@ export function Cosmos() {
       <color attach="background" args={["#050507"]} />
       <fog attach="fog" args={["#050507", 35, 90]} />
 
+      {/* Everyone else's settled sparks */}
       {backgroundSparks
-        .filter((s) => !sessionIds.has(s.id))
+        .filter((s) => !myIds.has(s.id))
         .map((s) => (
           <Spark key={s.id} spark={toSeedShape(s)} dimTo={backgroundDimTo} />
         ))}
 
+      {/* My persistent sparks from previous sessions — settled, always visible */}
+      {persistedMySparks.map((s) => (
+        <Spark key={s.id} spark={toSeedShape(s)} />
+      ))}
+
+      {/* Freshly conjured sparks — bright glow phase */}
       {userSparks.map((s) => (
         <Spark
           key={s.id}
-          spark={{
-            id: s.id,
-            x: s.x,
-            y: s.y,
-            z: s.z,
-            hue: s.hue,
-            radius: s.radius,
-            driftSpeed: s.driftSpeed,
-            phase: s.phase,
-            intensity: 1,
-            handle: "your light",
-          }}
+          spark={toSeedShape(s)}
           bornAt={s.createdAt}
         />
       ))}
@@ -122,14 +127,16 @@ function CameraAnimator() {
       hasMounted.current = true;
       return;
     }
-    const { viewMode, userSparks } = useStore.getState();
+    const { viewMode, userSparks, myDbSparks } = useStore.getState();
+    // All sparks the user owns — persistent + this session
+    const allMine = [...myDbSparks, ...userSparks];
     let tx = 0,
       ty = 0,
       tz = 18;
     if (viewMode === "constellation") {
-      if (userSparks.length > 0) {
-        tx = userSparks.reduce((a, s) => a + s.x, 0) / userSparks.length;
-        ty = userSparks.reduce((a, s) => a + s.y, 0) / userSparks.length;
+      if (allMine.length > 0) {
+        tx = allMine.reduce((a, s) => a + s.x, 0) / allMine.length;
+        ty = allMine.reduce((a, s) => a + s.y, 0) / allMine.length;
         tz = 8;
       } else {
         tx = 0;
