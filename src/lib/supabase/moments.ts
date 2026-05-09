@@ -13,6 +13,7 @@ type MomentRow = {
   drift_speed: number;
   phase: number;
   created_at: string;
+  artifact_url: string | null;
 };
 
 export async function fetchMoments(limit = 400): Promise<UserSpark[]> {
@@ -70,5 +71,6 @@ function rowToSpark(row: MomentRow): UserSpark {
     driftSpeed: row.drift_speed,
     phase: row.phase,
     createdAt: new Date(row.created_at).getTime(),
+    artifactUrl: row.artifact_url ?? undefined,
   };
 }

@@ -8,6 +8,7 @@ import { SimilarityThreads } from "./SimilarityThreads";
 import { CustomControls } from "./CustomControls";
 import { generateSeedSparks } from "@/lib/seed-sparks";
 import { useStore, GLOW_HUES, type UserSpark } from "@/lib/store";
+import type { MomentMeta } from "./Spark";
 
 export function Cosmos() {
   const sparks = useMemo(() => generateSeedSparks(160), []);
@@ -18,6 +19,11 @@ export function Cosmos() {
   const loadSimilarPairs = useStore((s) => s.loadSimilarPairs);
   const similarPairs = useStore((s) => s.similarPairs);
   const viewMode = useStore((s) => s.viewMode);
+  const setHoveredMoment = useStore((s) => s.setHoveredMoment);
+
+  const onHover = (meta: MomentMeta, x: number, y: number) =>
+    setHoveredMoment({ ...meta, x, y });
+  const onHoverEnd = () => setHoveredMoment(null);
 
   useEffect(() => {
     loadMoments();
@@ -73,24 +79,40 @@ export function Cosmos() {
         <Spark key={s.id} spark={s} dimTo={backgroundDimTo} />
       ))}
 
-      {/* Real moments from other people — overlaid on top of seed layer */}
+      {/* Real moments from other people — hoverable */}
       {dbSparks
         .filter((s) => !myIds.has(s.id))
         .map((s) => (
-          <Spark key={`db-${s.id}`} spark={toSeedShape(s)} dimTo={backgroundDimTo} />
+          <Spark
+            key={`db-${s.id}`}
+            spark={toSeedShape(s)}
+            dimTo={backgroundDimTo}
+            moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl }}
+            onHover={onHover}
+            onHoverEnd={onHoverEnd}
+          />
         ))}
 
-      {/* My persistent sparks from previous sessions — settled, always visible */}
+      {/* My persistent sparks — settled, always visible, hoverable */}
       {persistedMySparks.map((s) => (
-        <Spark key={s.id} spark={toSeedShape(s)} />
+        <Spark
+          key={s.id}
+          spark={toSeedShape(s)}
+          moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl }}
+          onHover={onHover}
+          onHoverEnd={onHoverEnd}
+        />
       ))}
 
-      {/* Freshly conjured sparks — bright glow phase */}
+      {/* Freshly conjured sparks — bright glow phase, hoverable */}
       {userSparks.map((s) => (
         <Spark
           key={s.id}
           spark={toSeedShape(s)}
           bornAt={s.createdAt}
+          moment={{ id: s.id, words: s.words, color: s.color, artifactUrl: s.artifactUrl }}
+          onHover={onHover}
+          onHoverEnd={onHoverEnd}
         />
       ))}
 

@@ -31,3 +31,12 @@ export async function requestEmbedding(id: string, words: string): Promise<void>
     body: JSON.stringify({ id, words }),
   });
 }
+
+/** Called fire-and-forget after saving a moment — generates the Replicate artifact. */
+export async function requestArtifact(id: string, words: string): Promise<void> {
+  await fetch("/api/generate-artifact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, words }),
+  });
+}

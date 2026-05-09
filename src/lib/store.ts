@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { fetchMoments, fetchMyMoments, saveMoment } from "@/lib/supabase/moments";
-import { fetchSimilarPairs, requestEmbedding, type SimilarPair } from "@/lib/supabase/similarity";
+import { fetchSimilarPairs, requestEmbedding, requestArtifact, type SimilarPair } from "@/lib/supabase/similarity";
 
 export type GlowColor = "warm" | "cool" | "rose" | "sage" | "violet";
 
@@ -24,6 +24,7 @@ export type UserSpark = {
   driftSpeed: number;
   phase: number;
   createdAt: number;
+  artifactUrl?: string;
 };
 
 type PendingConjure = {
@@ -59,6 +60,10 @@ type Store = {
   // AI similarity threads
   similarPairs: SimilarPair[];
   loadSimilarPairs: () => Promise<void>;
+
+  // Hover card
+  hoveredMoment: { id: string; words: string; color: GlowColor; artifactUrl?: string; x: number; y: number } | null;
+  setHoveredMoment: (m: Store["hoveredMoment"]) => void;
 
   // Two-view zoom system
   viewMode: ViewMode;
@@ -99,7 +104,10 @@ export const useStore = create<Store>((set, get) => ({
     }));
     const { userId } = get();
     saveMoment(spark, userId)
-      .then(() => requestEmbedding(spark.id, spark.words))
+      .then(() => Promise.all([
+        requestEmbedding(spark.id, spark.words),
+        requestArtifact(spark.id, spark.words),
+      ]))
       .catch(console.error);
   },
 
@@ -108,6 +116,9 @@ export const useStore = create<Store>((set, get) => ({
     const pairs = await fetchSimilarPairs();
     set({ similarPairs: pairs });
   },
+
+  hoveredMoment: null,
+  setHoveredMoment: (m) => set({ hoveredMoment: m }),
 
   viewMode: "cosmos",
   viewVersion: 0,

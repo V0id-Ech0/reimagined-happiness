@@ -1,21 +1,31 @@
 "use client";
 
 import { useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { SeedSpark } from "@/lib/seed-sparks";
+import type { GlowColor } from "@/lib/store";
+
+export type MomentMeta = {
+  id: string;
+  words: string;
+  color: GlowColor;
+  artifactUrl?: string;
+};
 
 type Props = {
   spark: SeedSpark;
-  /** Wall-clock ms when this spark was born — drives the bright→settled glow phase */
   bornAt?: number;
-  /** Target dim multiplier (0..1). Eases smoothly toward this each frame. */
   dimTo?: number;
+  /** If provided, pointer events are enabled and the hover card fires. */
+  moment?: MomentMeta;
+  onHover?: (meta: MomentMeta, x: number, y: number) => void;
+  onHoverEnd?: () => void;
 };
 
 const GLOW_DURATION_MS = 12_000;
 
-export function Spark({ spark, bornAt, dimTo = 1 }: Props) {
+export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const coreRef = useRef<THREE.Mesh>(null);
   const haloRef = useRef<THREE.Mesh>(null);
@@ -34,7 +44,6 @@ export function Spark({ spark, bornAt, dimTo = 1 }: Props) {
         spark.y + Math.cos(t * spark.driftSpeed * 0.7 + spark.phase) * 0.18;
     }
 
-    // Ease the dim multiplier toward its target
     dim.current += (dimTo - dim.current) * 0.04;
 
     let glowMult = 1;
@@ -67,10 +76,27 @@ export function Spark({ spark, bornAt, dimTo = 1 }: Props) {
     }
   });
 
+  const pointerHandlers = moment
+    ? {
+        onPointerOver: (e: ThreeEvent<PointerEvent>) => {
+          e.stopPropagation();
+          if (moment && onHover) onHover(moment, e.nativeEvent.clientX, e.nativeEvent.clientY);
+          document.body.style.cursor = "pointer";
+        },
+        onPointerOut: () => {
+          onHoverEnd?.();
+          document.body.style.cursor = "";
+        },
+        onPointerMove: (e: ThreeEvent<PointerEvent>) => {
+          if (moment && onHover) onHover(moment, e.nativeEvent.clientX, e.nativeEvent.clientY);
+        },
+      }
+    : {};
+
   const r = spark.radius;
 
   return (
-    <group ref={groupRef} position={[spark.x, spark.y, spark.z]}>
+    <group ref={groupRef} position={[spark.x, spark.y, spark.z]} {...pointerHandlers}>
       <mesh ref={haloRef} renderOrder={1}>
         <sphereGeometry args={[r * 3, 16, 16]} />
         <meshBasicMaterial

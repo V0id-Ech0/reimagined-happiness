@@ -5,6 +5,7 @@ import { ConjureButton } from "@/components/ui/ConjureButton";
 import { ConjureModal } from "@/components/ui/ConjureModal";
 import { CanvasHint } from "@/components/ui/CanvasHint";
 import { AuthInit } from "@/components/ui/AuthInit";
+import { SparkHoverCard } from "@/components/ui/SparkHoverCard";
 
 // Canvas is client-only — Three.js won't run during SSR
 const Cosmos = dynamic(
@@ -33,6 +34,7 @@ export default function Home() {
       <NavPanel />
       <ConjureButton />
       <ConjureModal />
+      <SparkHoverCard />
     </main>
   );
 }
