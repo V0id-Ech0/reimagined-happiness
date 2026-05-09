@@ -73,8 +73,6 @@ function getFlareTexture(): THREE.CanvasTexture {
 export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const coreRef = useRef<THREE.Mesh>(null);
-  const haloRef = useRef<THREE.Mesh>(null);
-  const midRef = useRef<THREE.Mesh>(null);
   const flareRef = useRef<THREE.Sprite>(null);
   const flareMatRef = useRef<THREE.SpriteMaterial>(null);
   const burstRef = useRef<THREE.Mesh>(null);
@@ -118,16 +116,6 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
       coreRef.current.scale.setScalar(pulse * scaleMult);
       const mat = coreRef.current.material as THREE.MeshBasicMaterial;
       mat.opacity = Math.min(1, totalMult);
-    }
-    if (haloRef.current) {
-      const mat = haloRef.current.material as THREE.MeshBasicMaterial;
-      mat.opacity = Math.min(1, spark.intensity * 0.22 * totalMult);
-      haloRef.current.scale.setScalar(pulse * scaleMult);
-    }
-    if (midRef.current) {
-      const mat = midRef.current.material as THREE.MeshBasicMaterial;
-      mat.opacity = Math.min(1, spark.intensity * 0.55 * totalMult);
-      midRef.current.scale.setScalar(pulse * scaleMult);
     }
 
     // Star flare — slow rotation makes it feel alive, not static
@@ -209,32 +197,6 @@ export function Spark({ spark, bornAt, dimTo = 1, moment, onHover, onHoverEnd }:
           toneMapped={false}
         />
       </sprite>
-
-      <mesh ref={haloRef} renderOrder={2}>
-        <sphereGeometry args={[r * 3, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={spark.intensity * 0.22}
-          depthWrite={false}
-          depthTest={false}
-          blending={THREE.AdditiveBlending}
-          toneMapped={false}
-        />
-      </mesh>
-
-      <mesh ref={midRef} renderOrder={3}>
-        <sphereGeometry args={[r * 1.7, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={spark.intensity * 0.55}
-          depthWrite={false}
-          depthTest={false}
-          blending={THREE.AdditiveBlending}
-          toneMapped={false}
-        />
-      </mesh>
 
       <mesh ref={coreRef} renderOrder={4}>
         <sphereGeometry args={[r * 0.95, 16, 16]} />
