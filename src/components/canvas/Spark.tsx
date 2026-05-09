@@ -5,83 +5,66 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { SeedSpark } from "@/lib/seed-sparks";
 
-type Props = {
-  spark: SeedSpark;
-};
+type Props = { spark: SeedSpark };
 
-/**
- * A single luminous node — base form is a soft glowing orb that drifts
- * gently in place. Future evolution: shape morphs from logged input,
- * glow fades with time, particle artifact replaces the simple sphere.
- */
 export function Spark({ spark }: Props) {
   const groupRef = useRef<THREE.Group>(null);
-  const innerRef = useRef<THREE.Mesh>(null);
-  const haloRef = useRef<THREE.Mesh>(null);
+  const coreRef = useRef<THREE.Mesh>(null);
 
-  const color = new THREE.Color().setHSL(spark.hue / 360, 0.9, 0.78);
+  // Vivid, high-saturation color — skipping near-black and near-white hues
+  const color = new THREE.Color().setHSL(spark.hue / 360, 1, 0.72);
 
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
     if (groupRef.current) {
-      const drift = Math.sin(t * spark.driftSpeed + spark.phase);
-      const drift2 = Math.cos(t * spark.driftSpeed * 0.7 + spark.phase);
-      groupRef.current.position.x = spark.x + drift * 0.15;
-      groupRef.current.position.y = spark.y + drift2 * 0.15;
+      groupRef.current.position.x = spark.x + Math.sin(t * spark.driftSpeed + spark.phase) * 0.18;
+      groupRef.current.position.y = spark.y + Math.cos(t * spark.driftSpeed * 0.7 + spark.phase) * 0.18;
     }
-    if (innerRef.current) {
-      const pulse = 0.85 + Math.sin(t * 1.2 + spark.phase) * 0.15;
-      innerRef.current.scale.setScalar(pulse);
-    }
-    if (haloRef.current) {
-      const breath = 1 + Math.sin(t * 0.6 + spark.phase) * 0.08;
-      haloRef.current.scale.setScalar(breath);
+    if (coreRef.current) {
+      const pulse = 0.88 + Math.sin(t * 1.4 + spark.phase) * 0.12;
+      coreRef.current.scale.setScalar(pulse);
     }
   });
 
+  const r = spark.radius;
+
   return (
     <group ref={groupRef} position={[spark.x, spark.y, spark.z]}>
-      {/* Wide atmosphere — barely there, just warms the void */}
-      <mesh>
-        <sphereGeometry args={[spark.radius * 7, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={spark.intensity * 0.04}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
       {/* Outer halo */}
-      <mesh ref={haloRef}>
-        <sphereGeometry args={[spark.radius * 3.5, 16, 16]} />
+      <mesh renderOrder={1}>
+        <sphereGeometry args={[r * 5, 12, 12]} />
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={spark.intensity * 0.14}
+          opacity={spark.intensity * 0.07}
           depthWrite={false}
+          depthTest={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
+
       {/* Mid glow */}
-      <mesh>
-        <sphereGeometry args={[spark.radius * 2, 16, 16]} />
+      <mesh renderOrder={2}>
+        <sphereGeometry args={[r * 2.4, 12, 12]} />
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={spark.intensity * 0.38}
+          opacity={spark.intensity * 0.35}
           depthWrite={false}
+          depthTest={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
-      {/* Core */}
-      <mesh ref={innerRef}>
-        <sphereGeometry args={[spark.radius, 16, 16]} />
+
+      {/* Bright core */}
+      <mesh ref={coreRef} renderOrder={3}>
+        <sphereGeometry args={[r, 12, 12]} />
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={Math.min(1, spark.intensity * 1.1)}
+          opacity={Math.min(1, spark.intensity * 1.2)}
           depthWrite={false}
+          depthTest={false}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
