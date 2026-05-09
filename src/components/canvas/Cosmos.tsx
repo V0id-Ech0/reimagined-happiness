@@ -30,8 +30,10 @@ export function Cosmos() {
     ...userSparks.map((s) => s.id),
   ]);
 
-  // Background = public cosmos minus sparks already shown as "mine"
-  const backgroundSparks = dbSparks.length > 0 ? dbSparks : sparks;
+  // Seed sparks always fill the background for depth — real sparks overlay them.
+  // Real sparks that share an ID with a seed spark won't double-render because
+  // seed IDs are "seed-N" strings and real UUIDs never collide.
+  const realDbIds = new Set(dbSparks.map((s) => s.id));
   const backgroundDimTo = viewMode === "constellation" ? 0.12 : 1;
 
   // myDbSparks that haven't been re-conjured this session (avoid double-render)
@@ -40,7 +42,7 @@ export function Cosmos() {
 
   // Position map for SimilarityThreads — covers all rendered sparks
   const sparkPositions = useMemo(() => {
-    const all = [...backgroundSparks, ...persistedMySparks, ...userSparks];
+    const all = [...sparks, ...dbSparks, ...persistedMySparks, ...userSparks];
     const map: Record<string, { x: number; y: number; z: number }> = {};
     for (const s of all) map[s.id] = { x: s.x, y: s.y, z: s.z };
     return map;
@@ -66,11 +68,16 @@ export function Cosmos() {
       <color attach="background" args={["#050507"]} />
       <fog attach="fog" args={["#050507", 35, 90]} />
 
-      {/* Everyone else's settled sparks */}
-      {backgroundSparks
+      {/* Seed sparks — always visible as ambient depth, dimmed in constellation view */}
+      {sparks.map((s) => (
+        <Spark key={s.id} spark={s} dimTo={backgroundDimTo} />
+      ))}
+
+      {/* Real moments from other people — overlaid on top of seed layer */}
+      {dbSparks
         .filter((s) => !myIds.has(s.id))
         .map((s) => (
-          <Spark key={s.id} spark={toSeedShape(s)} dimTo={backgroundDimTo} />
+          <Spark key={`db-${s.id}`} spark={toSeedShape(s)} dimTo={backgroundDimTo} />
         ))}
 
       {/* My persistent sparks from previous sessions — settled, always visible */}
