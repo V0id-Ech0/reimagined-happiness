@@ -32,11 +32,18 @@ export async function requestEmbedding(id: string, words: string): Promise<void>
   });
 }
 
-/** Called fire-and-forget after saving a moment — generates the Replicate artifact. */
-export async function requestArtifact(id: string, words: string): Promise<void> {
-  await fetch("/api/generate-artifact", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, words }),
-  });
+/** Called fire-and-forget after saving a moment — generates the Replicate artifact. Returns the URL on success. */
+export async function requestArtifact(id: string, words: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/generate-artifact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, words }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return (json.url as string) ?? null;
+  } catch {
+    return null;
+  }
 }

@@ -104,16 +104,25 @@ export const useStore = create<Store>((set, get) => ({
     }));
     const { userId } = get();
     saveMoment(spark, userId)
-      .then(() => Promise.all([
-        requestEmbedding(spark.id, spark.words),
-        requestArtifact(spark.id, spark.words),
-      ]))
+      .then(async () => {
+        const [, artifactUrl] = await Promise.all([
+          requestEmbedding(spark.id, spark.words),
+          requestArtifact(spark.id, spark.words),
+        ]);
+        if (artifactUrl) {
+          set((s) => ({
+            userSparks: s.userSparks.map((us) =>
+              us.id === spark.id ? { ...us, artifactUrl } : us
+            ),
+          }));
+        }
+      })
       .catch(console.error);
   },
 
   similarPairs: [],
   loadSimilarPairs: async () => {
-    const pairs = await fetchSimilarPairs();
+    const pairs = await fetchSimilarPairs(0.60);
     set({ similarPairs: pairs });
   },
 

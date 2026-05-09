@@ -13,10 +13,12 @@ type Props = {
   positions: Record<string, SparkPos>;
 };
 
-const MAX_THREAD_DISTANCE = 32;
+// Raised to 60 so sparks spread across the cosmos still connect
+const MAX_THREAD_DISTANCE = 60;
 
 export function SimilarityThreads({ pairs, positions }: Props) {
-  const matRef = useRef<THREE.LineBasicMaterial>(null);
+  const coreRef = useRef<THREE.LineBasicMaterial>(null);
+  const glowRef = useRef<THREE.LineBasicMaterial>(null);
 
   const geometry = useMemo(() => {
     const pts: number[] = [];
@@ -26,8 +28,6 @@ export function SimilarityThreads({ pairs, positions }: Props) {
       const b = positions[idB];
       if (!a || !b) continue;
 
-      // Don't draw threads between sparks that are very far apart —
-      // spanning the whole canvas would look like noise, not meaning.
       const dx = a.x - b.x;
       const dy = a.y - b.y;
       const dz = a.z - b.z;
@@ -41,28 +41,43 @@ export function SimilarityThreads({ pairs, positions }: Props) {
     return geo;
   }, [pairs, positions]);
 
-  // Slow global pulse — gives the threads life without distracting
   useFrame(({ clock }) => {
-    if (matRef.current) {
-      matRef.current.opacity =
-        0.055 + Math.sin(clock.elapsedTime * 0.35) * 0.025;
-    }
+    const pulse = 0.5 + Math.sin(clock.elapsedTime * 0.4) * 0.15;
+    if (coreRef.current) coreRef.current.opacity = pulse;
+    if (glowRef.current) glowRef.current.opacity = pulse * 0.28;
   });
 
   if (pairs.length === 0) return null;
 
   return (
-    <lineSegments geometry={geometry} renderOrder={0}>
-      <lineBasicMaterial
-        ref={matRef}
-        color="#e8e4ff"
-        transparent
-        opacity={0.055}
-        depthWrite={false}
-        depthTest={false}
-        blending={THREE.AdditiveBlending}
-        toneMapped={false}
-      />
-    </lineSegments>
+    <>
+      {/* Outer glow layer — same geometry, softer colour, lower opacity */}
+      <lineSegments geometry={geometry} renderOrder={0}>
+        <lineBasicMaterial
+          ref={glowRef}
+          color="#9d8fff"
+          transparent
+          opacity={0.14}
+          depthWrite={false}
+          depthTest={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </lineSegments>
+
+      {/* Core line — bright white-violet, high opacity */}
+      <lineSegments geometry={geometry} renderOrder={1}>
+        <lineBasicMaterial
+          ref={coreRef}
+          color="#e8e4ff"
+          transparent
+          opacity={0.5}
+          depthWrite={false}
+          depthTest={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </lineSegments>
+    </>
   );
 }
