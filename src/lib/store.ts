@@ -30,6 +30,8 @@ type PendingConjure = {
   color: GlowColor;
 };
 
+export type ViewMode = "cosmos" | "constellation";
+
 type Store = {
   isConjureOpen: boolean;
   openConjure: () => void;
@@ -44,6 +46,15 @@ type Store = {
   pendingConjure: PendingConjure | null;
   requestConjure: (words: string, color: GlowColor) => void;
   commitSpark: (spark: UserSpark) => void;
+
+  // The two-view zoom system
+  viewMode: ViewMode;
+  // Bumped on every setViewMode, even if mode doesn't change — re-triggers the
+  // camera animator so a user who manually drifted away can re-snap to view.
+  viewVersion: number;
+  setViewMode: (mode: ViewMode) => void;
+  isTransitioning: boolean;
+  _setTransitioning: (v: boolean) => void;
 };
 
 export const useStore = create<Store>((set) => ({
@@ -66,7 +77,13 @@ export const useStore = create<Store>((set) => ({
       userSparks: [...state.userSparks, spark],
       pendingConjure: null,
     }));
-    // Fire-and-forget — local state is the source of truth this session
     saveMoment(spark).catch(console.error);
   },
+
+  viewMode: "cosmos",
+  viewVersion: 0,
+  setViewMode: (mode) =>
+    set((s) => ({ viewMode: mode, viewVersion: s.viewVersion + 1 })),
+  isTransitioning: false,
+  _setTransitioning: (v) => set({ isTransitioning: v }),
 }));

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { useEffect, useMemo, useRef } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import { Spark } from "./Spark";
 import { CustomControls } from "./CustomControls";
 import { generateSeedSparks } from "@/lib/seed-sparks";
@@ -12,17 +13,17 @@ export function Cosmos() {
   const userSparks = useStore((s) => s.userSparks);
   const dbSparks = useStore((s) => s.dbSparks);
   const loadMoments = useStore((s) => s.loadMoments);
+  const viewMode = useStore((s) => s.viewMode);
 
-  // Load the shared cosmos from Supabase once on mount
   useEffect(() => {
     loadMoments();
   }, [loadMoments]);
 
-  // DB sparks replace seed sparks once data arrives; seed sparks fill the void
   const backgroundSparks = dbSparks.length > 0 ? dbSparks : sparks;
-
-  // IDs of sparks already glowing in userSparks — skip them in the background layer
   const sessionIds = new Set(userSparks.map((s) => s.id));
+
+  // In constellation view, anything that isn't yours fades way down
+  const backgroundDimTo = viewMode === "constellation" ? 0.12 : 1;
 
   return (
     <Canvas
@@ -46,10 +47,7 @@ export function Cosmos() {
       {backgroundSparks
         .filter((s) => !sessionIds.has(s.id))
         .map((s) => (
-          <Spark
-            key={s.id}
-            spark={toSeedShape(s)}
-          />
+          <Spark key={s.id} spark={toSeedShape(s)} dimTo={backgroundDimTo} />
         ))}
 
       {userSparks.map((s) => (
@@ -72,13 +70,23 @@ export function Cosmos() {
       ))}
 
       <ConjureCommitter />
+      <CameraAnimator />
       <CustomControls minDistance={4} maxDistance={60} />
     </Canvas>
   );
 }
 
-/** Maps any spark shape (SeedSpark or UserSpark) to the SeedSpark form Spark expects. */
-function toSeedShape(s: { id: string; x: number; y: number; z: number; hue: number; radius: number; driftSpeed: number; phase: number; intensity?: number }) {
+function toSeedShape(s: {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  hue: number;
+  radius: number;
+  driftSpeed: number;
+  phase: number;
+  intensity?: number;
+}) {
   return {
     id: s.id,
     x: s.x,
@@ -94,8 +102,69 @@ function toSeedShape(s: { id: string; x: number; y: number; z: number; hue: numb
 }
 
 /**
- * When a Conjure is requested, places the new spark at the camera's current
- * view center (with a small jitter so repeats don't stack), then commits it.
+ * Tweens the camera between the wide Cosmos view and the tight Constellation
+ * view whenever viewVersion bumps. Skips the very first mount so the initial
+ * camera placement isn't overridden by a self-targeted no-op animation.
+ */
+function CameraAnimator() {
+  const { camera } = useThree();
+  const viewVersion = useStore((s) => s.viewVersion);
+  const setTransitioning = useStore((s) => s._setTransitioning);
+
+  const startPos = useRef(new THREE.Vector3());
+  const targetPos = useRef(new THREE.Vector3());
+  const startedAt = useRef<number | null>(null);
+  const hasMounted = useRef(false);
+  const DURATION_MS = 2200;
+
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true;
+      return;
+    }
+    const { viewMode, userSparks } = useStore.getState();
+    let tx = 0,
+      ty = 0,
+      tz = 18;
+    if (viewMode === "constellation") {
+      if (userSparks.length > 0) {
+        tx = userSparks.reduce((a, s) => a + s.x, 0) / userSparks.length;
+        ty = userSparks.reduce((a, s) => a + s.y, 0) / userSparks.length;
+        tz = 8;
+      } else {
+        tx = 0;
+        ty = 0;
+        tz = 10;
+      }
+    }
+    targetPos.current.set(tx, ty, tz);
+    startPos.current.copy(camera.position);
+    startedAt.current = Date.now();
+    setTransitioning(true);
+  }, [viewVersion, camera, setTransitioning]);
+
+  useFrame(() => {
+    if (startedAt.current === null) return;
+    // External cancellation (rare — controls are locked, but defensive)
+    if (!useStore.getState().isTransitioning) {
+      startedAt.current = null;
+      return;
+    }
+    const t = Math.min(1, (Date.now() - startedAt.current) / DURATION_MS);
+    const eased = 0.5 - 0.5 * Math.cos(Math.PI * t);
+    camera.position.lerpVectors(startPos.current, targetPos.current, eased);
+    if (t >= 1) {
+      camera.position.copy(targetPos.current);
+      startedAt.current = null;
+      setTransitioning(false);
+    }
+  });
+
+  return null;
+}
+
+/**
+ * Places a new spark at the camera's current view center on conjure.
  */
 function ConjureCommitter() {
   const { camera } = useThree();

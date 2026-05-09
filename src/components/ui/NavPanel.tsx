@@ -1,17 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useStore } from "@/lib/store";
 
-type Place = "cosmos" | "constellation";
-
-/**
- * Persistent ambient panel. Always tells you where you are without ever
- * shouting. Minimal, dark, slightly translucent. Will hold the zoom control,
- * the place indicator, and the conjure button.
- */
 export function NavPanel() {
-  const [place, setPlace] = useState<Place>("cosmos");
+  const place = useStore((s) => s.viewMode);
+  const setPlace = useStore((s) => s.setViewMode);
 
   return (
     <motion.div

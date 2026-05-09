@@ -3,6 +3,7 @@
 import { useThree, useFrame } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { useStore } from "@/lib/store";
 
 type Props = {
   minDistance?: number;
@@ -25,14 +26,15 @@ export function CustomControls({
     const canvas = gl.domElement;
     canvas.style.touchAction = "none";
 
-    // Start drag only when clicking directly on the canvas
+    const isLocked = () => useStore.getState().isTransitioning;
+
     const onPointerDown = (e: PointerEvent) => {
+      if (isLocked()) return;
       dragging.current = true;
       lastPointer.current = { x: e.clientX, y: e.clientY };
       canvas.style.cursor = "grabbing";
     };
 
-    // Track movement and release on window so they fire even if pointer leaves canvas
     const onPointerMove = (e: PointerEvent) => {
       if (!dragging.current) return;
       const dx = e.clientX - lastPointer.current.x;
@@ -50,6 +52,7 @@ export function CustomControls({
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
+      if (isLocked()) return;
       zoomVelocity.current += e.deltaY * 0.001;
     };
 
@@ -68,6 +71,13 @@ export function CustomControls({
   }, [camera, gl]);
 
   useFrame(() => {
+    // While the CameraAnimator owns the camera, leave it alone
+    if (useStore.getState().isTransitioning) {
+      velocity.current.x = 0;
+      velocity.current.y = 0;
+      zoomVelocity.current = 0;
+      return;
+    }
     camera.position.x += velocity.current.x;
     camera.position.y += velocity.current.y;
     velocity.current.x *= damping;
