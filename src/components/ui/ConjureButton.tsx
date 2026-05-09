@@ -1,14 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useStore } from "@/lib/store";
 
-/**
- * The "+" entry point. The deliberate, quiet invitation to add a moment.
- * Expanded form opens the logging flow — implemented next.
- */
 export function ConjureButton() {
+  const openConjure = useStore((s) => s.openConjure);
+
   return (
     <motion.button
+      onClick={openConjure}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 1.2, delay: 1, ease: [0.22, 1, 0.36, 1] }}

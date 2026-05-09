@@ -2,6 +2,7 @@ import dynamic from "next/dynamic";
 import { Wordmark } from "@/components/ui/Wordmark";
 import { NavPanel } from "@/components/ui/NavPanel";
 import { ConjureButton } from "@/components/ui/ConjureButton";
+import { ConjureModal } from "@/components/ui/ConjureModal";
 import { CanvasHint } from "@/components/ui/CanvasHint";
 
 // Canvas is client-only — Three.js won't run during SSR
@@ -29,6 +30,7 @@ export default function Home() {
       <CanvasHint />
       <NavPanel />
       <ConjureButton />
+      <ConjureModal />
     </main>
   );
 }
