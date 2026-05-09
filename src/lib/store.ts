@@ -118,11 +118,11 @@ export const useStore = create<Store>((set, get) => ({
     }));
     saveMoment(stamped, userId)
       .then(async () => {
+        console.log("[phosphene] spark saved:", stamped.id);
         const [, artifactUrl] = await Promise.all([
           requestEmbedding(stamped.id, stamped.words),
           requestArtifact(stamped.id, stamped.words),
         ]);
-        // Reload similarity pairs now that a new embedding exists
         const pairs = await fetchSimilarPairs(0.60);
         set((s) => ({
           similarPairs: pairs,
@@ -135,7 +135,7 @@ export const useStore = create<Store>((set, get) => ({
             : {}),
         }));
       })
-      .catch(console.error);
+      .catch((err) => console.error("[phosphene] commitSpark failed:", err));
   },
 
   similarPairs: [],

@@ -25,7 +25,11 @@ export async function fetchMoments(limit = 400): Promise<UserSpark[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error || !data) return [];
+  if (error) {
+    console.error("[phosphene] fetchMoments error", error);
+    return [];
+  }
+  if (!data) return [];
   return data.map(rowToSpark);
 }
 
@@ -37,21 +41,25 @@ export async function fetchMyMoments(userId: string): Promise<UserSpark[]> {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  if (error || !data) return [];
+  if (error) {
+    console.error("[phosphene] fetchMyMoments error", error);
+    return [];
+  }
+  if (!data) return [];
   return data.map(rowToSpark);
 }
 
 export async function saveMoment(spark: UserSpark, userId: string | null): Promise<void> {
   const supabase = createClient();
 
-  // If the store hasn't resolved the auth session yet, pull it from the client
-  // directly so the RLS policy (auth.uid() = user_id) always passes.
-  let resolvedUserId = userId;
-  if (!resolvedUserId) {
+  // Pull user_id from the live auth session if the store hasn't resolved it yet
+  let uid = userId;
+  if (!uid) {
     const { data: { session } } = await supabase.auth.getSession();
-    resolvedUserId = session?.user?.id ?? null;
+    uid = session?.user?.id ?? null;
   }
 
+  // Core insert — only columns that are guaranteed to exist
   const { error } = await supabase.from("moments").insert({
     id: spark.id,
     words: spark.words,
@@ -63,10 +71,24 @@ export async function saveMoment(spark: UserSpark, userId: string | null): Promi
     radius: spark.radius,
     drift_speed: spark.driftSpeed,
     phase: spark.phase,
-    user_id: resolvedUserId,
-    handle: spark.handle ?? null,
+    user_id: uid,
   });
-  if (error) throw error;
+
+  if (error) {
+    console.error("[phosphene] saveMoment error", error);
+    throw error;
+  }
+
+  // Best-effort: update handle if column exists (migration 0005)
+  if (spark.handle) {
+    await supabase
+      .from("moments")
+      .update({ handle: spark.handle })
+      .eq("id", spark.id)
+      .then(({ error: e }) => {
+        if (e) console.warn("[phosphene] handle update skipped:", e.message);
+      });
+  }
 }
 
 function rowToSpark(row: MomentRow): UserSpark {
